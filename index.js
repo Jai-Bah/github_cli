@@ -17,7 +17,7 @@ import repositoryRoutes from "./routes/repositoryRoutes.js";
 const app = express()
 app.use(express.static("public"));
 
-app.get("/", (req, res) => {
+app.get("/health", (req, res) => {
     res.json({
         message: "GitHub Repository API is running"
     });
