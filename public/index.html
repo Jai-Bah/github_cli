@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GitHub Repository Search</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        color: white;
+        text-align: center;
+        margin-bottom: 30px;
+        font-size: 2.5em;
+      }
+
+      .search-box {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      input {
+        width: 100%;
+        padding: 10px 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 5px;
+        font-size: 1em;
+        transition: border-color 0.3s;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 15px;
+      }
+
+      @media (max-width: 768px) {
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 5px;
+        font-size: 1em;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+        width: 100%;
+        margin-top: 10px;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      .loading {
+        display: none;
+        text-align: center;
+        color: white;
+        font-size: 1.1em;
+        margin: 20px 0;
+      }
+
+      .error {
+        background: #ff6b6b;
+        color: white;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        display: none;
+      }
+
+      .repositories {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+      }
+
+      .repo-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+
+      .repo-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      }
+
+      .repo-name {
+        font-size: 1.2em;
+        font-weight: 700;
+        color: #667eea;
+        margin-bottom: 10px;
+      }
+
+      .repo-stars {
+        color: #f59e0b;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+
+      .repo-url {
+        color: #0ea5e9;
+        text-decoration: none;
+        word-break: break-all;
+        font-size: 0.9em;
+      }
+
+      .repo-url:hover {
+        text-decoration: underline;
+      }
+
+      .results-info {
+        color: white;
+        margin-bottom: 20px;
+        font-size: 1.1em;
+      }
+
+      .no-results {
+        text-align: center;
+        color: white;
+        padding: 40px;
+        font-size: 1.1em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔍 GitHub Repository Search</h1>
+
+      <div class="search-box">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="fromDate">From Date (YYYY-MM-DD) *</label>
+            <input
+              type="text"
+              id="fromDate"
+              placeholder="e.g., 2026-08-01"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="toDate">To Date (YYYY-MM-DD)</label>
+            <input type="text" id="toDate" placeholder="e.g., 2026-08-31" />
+          </div>
+          <div class="form-group">
+            <label for="limit">Limit (1-20)</label>
+            <input type="number" id="limit" value="10" min="1" max="20" />
+          </div>
+        </div>
+        <button onclick="searchRepositories()">Search Repositories</button>
+      </div>
+
+      <div class="error" id="error"></div>
+      <div class="loading" id="loading">⏳ Loading repositories...</div>
+      <div class="results-info" id="resultsInfo"></div>
+      <div class="repositories" id="repositories"></div>
+    </div>
+
+    <script>
+      async function searchRepositories() {
+        const fromDate = document.getElementById("fromDate").value;
+        const toDate = document.getElementById("toDate").value;
+        const limit = document.getElementById("limit").value;
+        const errorDiv = document.getElementById("error");
+        const loadingDiv = document.getElementById("loading");
+        const repositoriesDiv = document.getElementById("repositories");
+        const resultsInfo = document.getElementById("resultsInfo");
+
+        // Clear previous results
+        errorDiv.style.display = "none";
+        repositoriesDiv.innerHTML = "";
+        resultsInfo.innerHTML = "";
+
+        // Validate from date
+        if (!fromDate) {
+          errorDiv.textContent = '❌ Please enter a "From Date"';
+          errorDiv.style.display = "block";
+          return;
+        }
+
+        loadingDiv.style.display = "block";
+
+        try {
+          // Build query string
+          let query = `/repositories?from=${encodeURIComponent(fromDate)}&limit=${limit}`;
+          if (toDate) {
+            query += `&to=${encodeURIComponent(toDate)}`;
+          }
+
+          const response = await fetch(query);
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Failed to fetch repositories");
+          }
+
+          const data = await response.json();
+          loadingDiv.style.display = "none";
+
+          if (data.repositories.length === 0) {
+            repositoriesDiv.innerHTML =
+              '<div class="no-results">No repositories found for this date range.</div>';
+            return;
+          }
+
+          resultsInfo.innerHTML = `Found <strong>${data.count}</strong> repositories`;
+
+          // Display repositories
+          data.repositories.forEach((repo) => {
+            const repoCard = document.createElement("div");
+            repoCard.className = "repo-card";
+            repoCard.innerHTML = `
+                        <div class="repo-name">${escapeHtml(repo.name)}</div>
+                        <div class="repo-stars">⭐ ${repo.stars.toLocaleString()} stars</div>
+                        <a href="${escapeHtml(repo.url)}" target="_blank" class="repo-url">${escapeHtml(repo.url)}</a>
+                    `;
+            repositoriesDiv.appendChild(repoCard);
+          });
+        } catch (error) {
+          loadingDiv.style.display = "none";
+          errorDiv.textContent = `❌ Error: ${error.message}`;
+          errorDiv.style.display = "block";
+        }
+      }
+
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // Allow searching with Enter key
+      document
+        .getElementById("fromDate")
+        .addEventListener("keypress", function (e) {
+          if (e.key === "Enter") {
+            searchRepositories();
+          }
+        });
+    </script>
+  </body>
+</html>
